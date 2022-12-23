@@ -176,9 +176,10 @@ async def send_post_step3_command(
 
             _kb = None
             if channel['btn_link_url']:
-                _btns_list = message.text.split(',')
-                _btns = list(map(lambda s: {'text': s, 'url': channel['btn_link_url']}, _btns_list))
-                _kb = kb.kb_mass_send(_btns)
+                if message.text != '0':
+                    _btns_list = message.text.split(',')
+                    _btns = list(map(lambda s: {'text': s, 'url': channel['btn_link_url']}, _btns_list))
+                    _kb = kb.kb_mass_send(_btns)
 
             if _data['data']['media'] and len(_data['data']['media']) == 1:
                 mes = _data['data']['media'][0]
