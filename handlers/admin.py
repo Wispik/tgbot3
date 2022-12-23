@@ -180,7 +180,17 @@ async def send_post_step3_command(
                 _btns = list(map(lambda s: {'text': s, 'url': channel['btn_link_url']}, _btns_list))
                 _kb = kb.kb_mass_send(_btns)
 
-            if _data['data']['media']:
+            if _data['data']['media'] and len(_data['data']['media']) == 1:
+                mes = _data['data']['media'][0]
+                if mes.photo:
+                    await bot.send_photo(channel['tg_id'], photo=mes.photo[-1].file_id, caption=_text, reply_markup=_kb, parse_mode=types.ParseMode.HTML)
+                elif mes.video:
+                    await bot.send_video(channel['tg_id'], video=mes.video.file_id, caption=_text, reply_markup=_kb, parse_mode=types.ParseMode.HTML)
+                elif mes.video_note:
+                    await bot.send_video_note(channel['tg_id'], video_note=mes.video_note.file_id, reply_markup=_kb)
+                elif mes.animation:
+                    await bot.send_animation(channel['tg_id'], animation=mes.animation.file_id, caption=_text, reply_markup=_kb, parse_mode=types.ParseMode.HTML)
+            elif _data['data']['media']:
                 media_group = types.MediaGroup()
                 for _i, obj in enumerate(_data['data']['media']):
                     if obj.photo:
@@ -190,20 +200,26 @@ async def send_post_step3_command(
 
                     try:
                         # We can also add a caption to each file by specifying `"caption": "text"`
+                        
+                        if obj.content_type=='animation' or obj.content_type=='video_note':
+                            _type = 'video'
+                        else:
+                            _type = obj.content_type
                         if _i == 0 and _text:
                             media_group.attach(
                                 {
                                     "media": file_id, 
-                                    "type": obj.content_type,
+                                    "type": _type,
                                     "caption": _text,
-                                    "parse_mode": types.ParseMode.HTML
+                                    "parse_mode": types.ParseMode.HTML,
+                                    "reply_markup": _kb
                                 }
                             )
                         else:
                             media_group.attach(
                                 {
                                     "media": file_id, 
-                                    "type": obj.content_type
+                                    "type": _type
                                 }
                             )
                     except ValueError:

@@ -28,7 +28,7 @@ class AlbumMiddleware(BaseMiddleware):
 
     album_data: dict = {}
 
-    def __init__(self, latency = 0.1):
+    def __init__(self, latency = 0.6):
         """
         You can provide custom latency to make sure
         albums are handled properly in highload.
@@ -38,6 +38,8 @@ class AlbumMiddleware(BaseMiddleware):
 
     async def on_process_message(self, message: types.Message, data: dict):
         if not message.media_group_id:
+            if message.photo or message.animation or message.video or message.video_note:
+                data["album"] = [message]
             return
         try:
             self.album_data[message.media_group_id].append(message)
