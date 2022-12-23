@@ -1,4 +1,5 @@
 import asyncio
+from typing import List, Optional
 
 from aiogram import types
 from aiogram.dispatcher import FSMContext
@@ -90,7 +91,7 @@ async def edit_channel_step1_command(
         return
     await state.set_data({'channel_id': int(channel_id)})
     await state.set_state(AppStates.STATE_EDIT_CHANNEL_LINK)
-    await message.answer('Введите ссылку для привязки к каналу link в формате @username')
+    await message.answer(f"Введите ссылку для привязки к каналу {channel['link']} в формате @username")
 
 
 async def edit_channel_step2_command(
@@ -137,23 +138,24 @@ async def send_post_step1_command(
 async def send_post_step2_command(
     message: types.Message,
     state: FSMContext,
-    is_admin: bool
+    is_admin: bool,
+    album: Optional[List[types.Message]] = None
 ):
     if not is_admin:
         return
     data = {
         'text': '',
-        'photo': [],
-        'video_id': None
+        'media': album
     }
     try:
         data['text'] = message.html_text
     except Exception:
         pass
-    if message.photo:
-        data['photo'] = [p.file_id for p in message.photo]
-    elif message.video:
-        data.video_id = message.video.file_id
+    # if message.photo:
+    #     data['photo'] = [p.file_id for p in message.photo]
+    # elif message.video:
+    #     data.video_id = message.video.file_id
+
     await state.set_data({'data': data})
     await state.set_state(AppStates.STATE_SEND_POST_BUTTONS)
     await message.answer('Введите название кнопок')
@@ -171,20 +173,43 @@ async def send_post_step3_command(
     for channel in channels:
         try:
             _text = utils.replace_in_message(_data['data']['text'], 'link', channel['btn_link_text'])
+
             _kb = None
             if channel['btn_link_url']:
                 _btns_list = message.text.split(',')
                 _btns = list(map(lambda s: {'text': s, 'url': channel['btn_link_url']}, _btns_list))
                 _kb = kb.kb_mass_send(_btns)
-            if _data['data']['video_id'] or _data['data']['photo']:
-                media = types.MediaGroup()
-                if _data['data']['photo']:
-                    for p in _data['data']['photo']:
-                        media.attach_photo(photo=p)
-                if _data['data']['video_id']:
-                    media.attach_video(_data['data']['video_id'])
-                await bot.send_media_group(channel['tg_id'], media=media)
-            if _text:
+
+            if _data['data']['media']:
+                media_group = types.MediaGroup()
+                for _i, obj in enumerate(_data['data']['media']):
+                    if obj.photo:
+                        file_id = obj.photo[-1].file_id
+                    else:
+                        file_id = obj[obj.content_type].file_id
+
+                    try:
+                        # We can also add a caption to each file by specifying `"caption": "text"`
+                        if _i == 0 and _text:
+                            media_group.attach(
+                                {
+                                    "media": file_id, 
+                                    "type": obj.content_type,
+                                    "caption": _text,
+                                    "parse_mode": types.ParseMode.HTML
+                                }
+                            )
+                        else:
+                            media_group.attach(
+                                {
+                                    "media": file_id, 
+                                    "type": obj.content_type
+                                }
+                            )
+                    except ValueError:
+                        pass
+                await bot.send_media_group(channel['tg_id'], media=media_group)
+            else:
                 await bot.send_message(channel['tg_id'], text=_text, reply_markup=_kb, parse_mode=types.ParseMode.HTML)
         except Exception as e:
             print(e)
