@@ -139,7 +139,8 @@ async def send_post_step2_command(
     message: types.Message,
     state: FSMContext,
     is_admin: bool,
-    album: Optional[List[types.Message]] = None
+    album: Optional[List[types.Message]] = None,
+    one_photo: Optional[types.Message] = None
 ):
     if not is_admin:
         return
@@ -147,6 +148,20 @@ async def send_post_step2_command(
         'text': '',
         'media': album
     }
+    if one_photo:
+        _data = await state.get_data()
+        if _data:
+            data = _data['data']
+        if not data['media']:
+            data['media'] = [one_photo]
+        else:
+            data['media'].append(one_photo)
+        await state.set_data({'data': data})
+        print(len(data['media']))
+        try:
+            data['text'] = message.html_text
+        except Exception:
+            return
     try:
         data['text'] = message.html_text
     except Exception:
