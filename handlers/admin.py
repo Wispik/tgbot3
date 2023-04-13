@@ -6,6 +6,8 @@ from aiogram.dispatcher import FSMContext
 
 import db.database as db
 from db.models import ChannelModel
+from keyboards.inline import get_channels_buttons
+from keyboards.reply import get_admin_menu_buttons
 from states import AppStates
 from settings import bot
 
@@ -20,6 +22,7 @@ async def create_channel_step1_command(
 ):
     if not is_admin:
         return
+    await state.finish()
     await state.set_state(AppStates.STATE_WAIT_CHANNEL_NUMBER)
     await message.answer('Введите номер канала')
 
@@ -77,14 +80,35 @@ async def create_channel_step4_command(
     await state.reset_state()
 
 
-async def edit_channel_step1_command(
+async def edit_channel_command(
     message: types.Message,
     state: FSMContext,
-    is_admin: bool
+    is_admin: bool,
 ):
     if not is_admin:
         return
-    channel_id = message.text.split('_')[-1]
+    await state.finish()
+    await message.answer("Редактировать канал", reply_markup=await get_channels_buttons())
+
+
+async def edit_channel_handler(
+    callback: types.CallbackQuery,
+    state: FSMContext
+):
+    channel_id = int(callback.data.lstrip("channel-"))
+    await edit_channel_step1_command(
+        callback.message,
+        state,
+        channel_id
+    )
+    await callback.answer()
+
+
+async def edit_channel_step1_command(
+    message: types.Message,
+    state: FSMContext,
+    channel_id: int,
+):
     channel = await db.get_channel_by_id(channel_id)
     if not channel:
         await message.answer(f"Канал под номером: {channel_id} - не найден!")
@@ -131,6 +155,7 @@ async def send_post_step1_command(
 ):
     if not is_admin:
         return
+    await state.finish()
     await message.answer('Отправьте пост')
     await state.set_state(AppStates.STATE_SEND_POST)
 
@@ -192,8 +217,15 @@ async def send_post_step3_command(
             _kb = None
             if channel['btn_link_url']:
                 if message.text != '0':
-                    _btns_list = message.text.split(',')
-                    _btns = list(map(lambda s: {'text': s, 'url': channel['btn_link_url']}, _btns_list))
+                    _btns_list = message.text.splitlines()
+                    _btns = []
+                    for btn in _btns_list:
+                        _btns_urls = btn.split(" - ")
+                        if len(_btns_urls) > 1:
+                            btn_text, btn_url = _btns_urls
+                            _btns.append({'text': btn_text, 'url': btn_url})
+                        else:
+                            _btns.append({'text': btn, 'url': channel['btn_link_url']})
                     _kb = kb.kb_mass_send(_btns)
 
             if _data['data']['media'] and len(_data['data']['media']) == 1:
@@ -250,3 +282,16 @@ async def send_post_step3_command(
 
     await state.reset_data()
     await state.reset_state()
+
+
+async def start_command(
+    message: types.Message,
+    state: FSMContext,
+    is_admin: bool
+):
+    if not is_admin:
+        await message.answer("Привет! Вы не админ.")
+        return
+
+    await state.finish()
+    await message.answer("Меню:", reply_markup=get_admin_menu_buttons())
