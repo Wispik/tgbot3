@@ -40,7 +40,7 @@ class AlbumMiddleware(BaseMiddleware):
         if not message.media_group_id:
             if message.photo :
                 data["one_photo"] = message
-            elif message.animation or message.video or message.video_note:
+            elif message.animation or message.video or message.video_note or message.voice or message.audio:
                 data["album"] = [message]
             return
         try:

@@ -36,7 +36,7 @@ def setup_handlers(dp: Dispatcher):
     )
     dp.register_message_handler(
         h_admin.send_post_step2_command,
-        content_types=["text", "photo", "video", "video_note", "animation"],
+        content_types=["any"],
         state=[AppStates.STATE_SEND_POST],
     )
     dp.register_message_handler(

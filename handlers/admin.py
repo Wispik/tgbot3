@@ -238,6 +238,10 @@ async def send_post_step3_command(
                     await bot.send_video_note(channel['tg_id'], video_note=mes.video_note.file_id, reply_markup=_kb)
                 elif mes.animation:
                     await bot.send_animation(channel['tg_id'], animation=mes.animation.file_id, caption=_text, reply_markup=_kb, parse_mode=types.ParseMode.HTML)
+                elif mes.voice:
+                    await bot.send_voice(channel['tg_id'], voice=mes.voice.file_id, duration=mes.voice.duration, caption=_text, reply_markup=_kb, parse_mode=types.ParseMode.HTML)
+                elif mes.audio:
+                    await bot.send_audio(channel['tg_id'], audio=mes.audio.file_id, duration=mes.audio.duration, caption=_text, reply_markup=_kb, parse_mode=types.ParseMode.HTML)
             elif _data['data']['media']:
                 media_group = types.MediaGroup()
                 for _i, obj in enumerate(_data['data']['media']):
